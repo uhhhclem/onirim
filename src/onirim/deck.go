@@ -111,24 +111,24 @@ func (d Deck) String() string {
 
 func addLabyrinthCards(d *Deck, c ColorEnum, sunCnt int) {
 	for i := 0; i < 3; i++ {
-		*d = append(*d, &Card{Labyrinth, c, Key})
+		d.AddCard(&Card{Labyrinth, c, Key})
 	}
 	for i := 0; i < 4; i++ {
-		*d = append(*d, &Card{Labyrinth, c, Moon})
+		d.AddCard(&Card{Labyrinth, c, Moon})
 	}
 	for i := 0; i < sunCnt; i++ {
-		*d = append(*d, &Card{Labyrinth, c, Sun})
+		d.AddCard(&Card{Labyrinth, c, Sun})
 	}
 }
 
 func addDoorCards(d *Deck, c ColorEnum) {
-	*d = append(*d, &Card{Class: Door, Color: c})
-	*d = append(*d, &Card{Class: Door, Color: c})
+	d.AddCard(&Card{Class: Door, Color: c})
+	d.AddCard(&Card{Class: Door, Color: c})
 }
 
 func addDreamCards(d *Deck) {
 	for i := 0; i < 10; i++ {
-		*d = append(*d, &Card{Class: Dream})
+		d.AddCard(&Card{Class: Dream})
 	}
 }
 
@@ -146,6 +146,17 @@ func (d *Deck) DrawCard() (*Card, error) {
 	c := (*d)[0]
 	*d = (*d)[1:]
 	return c, nil
+}
+
+func (d *Deck) LastCard() *Card {
+	if len(*d) == 0 {
+		return nil
+	}
+	return (*d)[len(*d)-1]
+}
+
+func (d *Deck) AddCard(c *Card) {
+	*d = append(*d, c)
 }
 
 // FillHand fills the hand up to five cards.

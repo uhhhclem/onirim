@@ -7,11 +7,9 @@ import (
 
 func main() {
 
-	d := onirim.MakeDeck()
-	h, err := d.DrawHand()
+	g, err := onirim.NewGame()
 	if err != nil {
 		fmt.Println(err)
-		return
 	}
-	fmt.Printf("Hand: %s", h)
+	fmt.Printf("Hand: %s", g.Hand)
 }
