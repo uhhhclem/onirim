@@ -132,10 +132,11 @@ func addDreamCards(d *Deck) {
 	}
 }
 
-func shuffle(d Deck) {
-	for i := 0; i < len(d); i++ {
-		j := i + rand.Intn(len(d)-i)
-		d[i], d[j] = d[j], d[i]
+func (d *Deck) Shuffle() {
+	deck := *d
+	for i := 0; i < len(deck); i++ {
+		j := i + rand.Intn(len(deck)-i)
+		deck[i], deck[j] = deck[j], deck[i]
 	}
 }
 
@@ -159,6 +160,13 @@ func (d *Deck) AddCard(c *Card) {
 	*d = append(*d, c)
 }
 
+func (d *Deck) RemoveCardAt(i int) *Card {
+	deck := *d
+	c := deck[i]
+	*d = append(deck[:i], deck[i+1:]...)
+	return c
+}
+
 // FillHand fills the hand up to five cards.
 func FillHand(deck, hand *Deck) error {
 	var err error
@@ -167,7 +175,7 @@ func FillHand(deck, hand *Deck) error {
 		if err == nil && len(limbo) > 0 {
 			log.Print("Shuffling Limbo into Deck")
 			*deck = append(*deck, limbo...)
-			shuffle(*deck)
+			(*deck).Shuffle()
 		}
 	}()
 
@@ -211,6 +219,6 @@ func MakeDeck() Deck {
 	addDoorCards(&d, Green)
 	addDoorCards(&d, Brown)
 	addDreamCards(&d)
-	shuffle(d)
+	d.Shuffle()
 	return d
 }
