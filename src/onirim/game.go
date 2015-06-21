@@ -30,14 +30,15 @@ func Printf(f string, data ...interface{}) {
 
 type Game struct {
 	*interact.Game
-	Done    bool
-	Deck    Deck
-	Hand    Deck
-	Row     Deck
-	Discard Deck
-	Limbo   Deck
-	Doors   Deck
-	Drawn   *Card
+	Done    bool	// Is the game over?
+	Deck    Deck	// Your deck.
+	Hand    Deck	// Your hand.  Ordering is insignificant.
+	Row     Deck	// The row of cards that you play to.
+	Discard Deck	// The discard pile.
+	Limbo   Deck	// Where Doors and Nightmares wait for reshuffling.
+	Doors   Deck	// Discovered doors.  Ordering is insignificant.
+	Drawn   *Card	// The last card drawn.
+	FoundDoor map[*Card]bool // Labyrinth cards used to discover a Door.
 }
 
 func NewGame() (*Game, error) {
@@ -163,8 +164,11 @@ func handlePlayOrDiscard(g *Game) interact.GameState {
 	}
 
 	g.Row.AddCard(card)
-	if g.IsDoorDiscovered() {
-		g.PlayDoor(card.Color)
+	if g.IsDoorDiscovered() && g.PlayDoor(card.Color) {
+		for i = 0; i < 3; i++ {
+			index := len(g.Row) - i - 1
+			g.FoundDoor[g.Row[index]] = true
+		}
 		if len(g.Doors) == 8 {
 			g.Done = true
 			return endOfGame
@@ -223,15 +227,27 @@ func parseKey(key string) (string, int) {
 }
 
 func (g *Game) IsDoorDiscovered() bool {
-	last := len(g.Row) - 1
-	if last < 2 {
+	if len(g.Row) == 0 {
 		return false
 	}
-	color := g.Row[last].Color
-	return color == g.Row[last-1].Color && color == g.Row[last-1].Color
+	color := g.Row[len(g.Row)-1].Color
+	var found Deck
+	
+	for i := len(g.Row) - 1; i >= 0 && len(found) < 3; i-- {
+		c := g.Row[i]
+		if g.FoundDoor[c] || c.Color != color {
+			return false
+		}
+		found = append(found, c)
+	}
+	if len(found) != 3 {
+		return false
+	}
+	return true
 }
 
-func (g *Game) PlayDoor(color ColorEnum) {
+// PlayDoor returns true if it can find and play a Door of the given color.
+func (g *Game) PlayDoor(color ColorEnum) bool {
 	for i, c := range g.Deck {
 		if c.Class != Door || c.Color != color {
 			continue
@@ -239,8 +255,9 @@ func (g *Game) PlayDoor(color ColorEnum) {
 		g.Deck.RemoveCardAt(i)
 		g.Doors.AddCard(c)
 		g.Logf("Played a %s door.", c.Color)
-		return
+		return true
 	}
+	return false
 }
 
 func handleEndOfTurn(g *Game) interact.GameState {
