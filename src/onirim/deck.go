@@ -164,46 +164,6 @@ func (d *Deck) RemoveCardAt(i int) *Card {
 	return c
 }
 
-// FillHand fills the hand up to five cards.
-func FillHand(deck, hand *Deck) error {
-	var err error
-	limbo := make(Deck, 0)
-	defer func() {
-		if err == nil && len(limbo) > 0 {
-			Println("Shuffling Limbo back into deck")
-			*deck = append(*deck, limbo...)
-			(*deck).Shuffle()
-		}
-	}()
-
-	for {
-		if len(*hand) >= 5 {
-			break
-		}
-		c, err := deck.DrawCard()
-		if err != nil {
-			return err
-		}
-		if c.Class != Labyrinth {
-			Printf("%s moved to Limbo\n", c)
-			limbo = append(limbo, c)
-			continue
-		}
-		*hand = append(*hand, c)
-		Printf("%s added to Hand\n", c)
-	}
-	return nil
-}
-
-// DrawHand draws a new hand from the deck.
-func (d *Deck) DrawHand() (Deck, error) {
-	hand := make(Deck, 0)
-	if err := FillHand(d, &hand); err != nil {
-		return nil, err
-	}
-	return hand, nil
-}
-
 // MakeDeck makes the basic Onirim deck.
 func MakeDeck() Deck {
 	d := make(Deck, 0, 76)

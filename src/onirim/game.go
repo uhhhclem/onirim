@@ -1,6 +1,7 @@
 package onirim
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 	"strconv"
@@ -20,6 +21,10 @@ func init() {
 	}()
 }
 
+func Print(s ...interface{}) {
+	printChan <- fmt.Sprint(s)
+}
+
 func Println(s ...interface{}) {
 	printChan <- fmt.Sprintln(s)
 }
@@ -30,23 +35,24 @@ func Printf(f string, data ...interface{}) {
 
 type Game struct {
 	*interact.Game
-	Done    bool	// Is the game over?
-	Deck    Deck	// Your deck.
-	Hand    Deck	// Your hand.  Ordering is insignificant.
-	Row     Deck	// The row of cards that you play to.
-	Discard Deck	// The discard pile.
-	Limbo   Deck	// Where Doors and Nightmares wait for reshuffling.
-	Doors   Deck	// Discovered doors.  Ordering is insignificant.
-	Drawn   *Card	// The last card drawn.
+	Done      bool           // Is the game over?
+	Deck      Deck           // Your deck.
+	Hand      Deck           // Your hand.  Ordering is insignificant.
+	Row       Deck           // The row of cards that you play to.
+	Discard   Deck           // The discard pile.
+	Limbo     Deck           // Where Doors and Nightmares wait for reshuffling.
+	Doors     Deck           // Discovered doors.  Ordering is insignificant.
+	Drawn     *Card          // The last card drawn.
 	FoundDoor map[*Card]bool // Labyrinth cards used to discover a Door.
 }
 
 func NewGame() (*Game, error) {
 	g := &Game{
-		Game: interact.NewGame(),
+		Game:      interact.NewGame(),
+		Deck:      MakeDeck(),
+		FoundDoor: make(map[*Card]bool),
 	}
-	g.Deck = MakeDeck()
-	if err := FillHand(&g.Deck, &g.Hand); err != nil {
+	if err := g.fillHand(); err != nil {
 		return nil, err
 	}
 	return g, nil
@@ -71,10 +77,12 @@ func (g *Game) RunLocal() {
 			if p == nil {
 				return
 			}
-			Println(p.Message)
+			buf := &bytes.Buffer{}
+			fmt.Fprintln(buf, p.Message)
 			for _, c := range p.Choices {
-				Printf("  %s: %s\n", c.Key, c.Name)
+				fmt.Fprintf(buf, "  %s: %s\n", c.Key, c.Name)
 			}
+			Print(buf.String())
 			for {
 				var key string
 				n, err := fmt.Scanf("%s\n", &key)
@@ -123,7 +131,6 @@ var handlers = map[interact.GameState]handler{
 }
 
 func handleStartOfTurn(g *Game) interact.GameState {
-	Println(startOfTurn)
 	playable := make(map[*Card]bool)
 	for _, c := range g.Hand {
 		playable[c] = g.isPlayable(c)
@@ -150,21 +157,20 @@ func handleStartOfTurn(g *Game) interact.GameState {
 }
 
 func handlePlayOrDiscard(g *Game) interact.GameState {
-	Printf(playOrDiscard)
 	c := <-g.NextChoice
 	action, i := parseKey(c.Key)
 	card := g.Hand.RemoveCardAt(i)
 
 	if action == "D" {
-		g.Discard.AddCard(card)
+		g.discard(card)
 		if card.Symbol == Key {
 			return prophecy
 		}
 		return endOfTurn
 	}
 
-	g.Row.AddCard(card)
-	if g.IsDoorDiscovered() && g.PlayDoor(card.Color) {
+	g.playCard(card)
+	if g.isDoorDiscovered() && g.playDoor(card.Color) {
 		for i = 0; i < 3; i++ {
 			index := len(g.Row) - i - 1
 			g.FoundDoor[g.Row[index]] = true
@@ -180,8 +186,9 @@ func handlePlayOrDiscard(g *Game) interact.GameState {
 func handleProphecy(g *Game) interact.GameState {
 	var temp Deck
 	g.Logf("Prophecy triggered")
+	// Unlike g.fillHand(), this draws exactly 5 cards under all circumstances.
 	for i := 0; i < 5; i++ {
-		c, err := g.Deck.DrawCard()
+		c, err := g.drawCard()
 		if err != nil {
 			return endOfGame
 		}
@@ -197,9 +204,9 @@ func handleProphecy(g *Game) interact.GameState {
 	choice := <-g.NextChoice
 	_, index := parseKey(choice.Key)
 	c := temp.RemoveCardAt(index)
-	g.Discard.AddCard(c)
+	g.discard(c)
 
-	for len(temp) > 0 {
+	for len(temp) > 1 {
 		g.NewPrompt("Select card to place on top of deck:")
 		for i, c := range temp {
 			g.AddChoice(
@@ -210,11 +217,13 @@ func handleProphecy(g *Game) interact.GameState {
 		choice := <-g.NextChoice
 		_, index := parseKey(choice.Key)
 		c := temp.RemoveCardAt(index)
-		g.Deck = append(Deck{c}, g.Deck...)
+		g.placeOnDeck(c)
 	}
+	g.placeOnDeck(temp[0])
 	return endOfTurn
 }
 
+// parseKey parses a key like "P2" into an action of "P" and an index of 1.
 func parseKey(key string) (string, int) {
 	action := string(key[0])
 	index := string(key[1])
@@ -226,13 +235,13 @@ func parseKey(key string) (string, int) {
 	return action, i - 1
 }
 
-func (g *Game) IsDoorDiscovered() bool {
+func (g *Game) isDoorDiscovered() bool {
 	if len(g.Row) == 0 {
 		return false
 	}
 	color := g.Row[len(g.Row)-1].Color
 	var found Deck
-	
+
 	for i := len(g.Row) - 1; i >= 0 && len(found) < 3; i-- {
 		c := g.Row[i]
 		if g.FoundDoor[c] || c.Color != color {
@@ -246,22 +255,21 @@ func (g *Game) IsDoorDiscovered() bool {
 	return true
 }
 
-// PlayDoor returns true if it can find and play a Door of the given color.
-func (g *Game) PlayDoor(color ColorEnum) bool {
+// playDoor returns true if it can find and play a Door of the given color.
+func (g *Game) playDoor(color ColorEnum) bool {
 	for i, c := range g.Deck {
 		if c.Class != Door || c.Color != color {
 			continue
 		}
 		g.Deck.RemoveCardAt(i)
 		g.Doors.AddCard(c)
-		g.Logf("Played a %s door.", c.Color)
+		g.Logf("Played %s door", color)
 		return true
 	}
 	return false
 }
 
 func handleEndOfTurn(g *Game) interact.GameState {
-	Printf(endOfTurn)
 	Printf(`
 
 Hand    : %s
@@ -272,15 +280,12 @@ Doors   : %s
 `, g.Hand, g.Row, g.Discard, g.Doors)
 
 	if len(g.Hand) == 5 {
-		if len(g.Limbo) > 0 {
-			g.Deck = append(g.Deck, g.Limbo...)
-			g.Deck.Shuffle()
-		}
+		g.shuffleLimboIntoDeck()
 		return startOfTurn
 	}
 
 	var err error
-	g.Drawn, err = g.Deck.DrawCard()
+	g.Drawn, err = g.drawCard()
 	if err != nil {
 		Println(err)
 		return endOfGame
@@ -302,11 +307,10 @@ Doors   : %s
 }
 
 func handleDoorDrawn(g *Game) interact.GameState {
-	Println(doorDrawn)
 	color := g.Drawn.Color
-	index, keyCard := g.MatchingKeyInHand(color)
+	index, keyCard := g.matchingKeyInHand(color)
 	if keyCard == nil {
-		g.Limbo.AddCard(g.Drawn)
+		g.moveToLimbo(g.Drawn)
 		g.Drawn = nil
 		return endOfTurn
 	}
@@ -318,16 +322,16 @@ func handleDoorDrawn(g *Game) interact.GameState {
 
 	if choice.Key == "Y" {
 		g.Doors.AddCard(g.Drawn)
-		g.Discard.AddCard(keyCard)
+		g.discard(keyCard)
 		g.Hand.RemoveCardAt(index)
 	} else {
-		g.Discard.AddCard(g.Drawn)
+		g.discard(g.Drawn)
 	}
 	g.Drawn = nil
 	return endOfTurn
 }
 
-func (g *Game) MatchingKeyInHand(color ColorEnum) (int, *Card) {
+func (g *Game) matchingKeyInHand(color ColorEnum) (int, *Card) {
 	for index, card := range g.Hand {
 		if card.Symbol == Key && card.Color == color {
 			return index, card
@@ -337,7 +341,6 @@ func (g *Game) MatchingKeyInHand(color ColorEnum) (int, *Card) {
 }
 
 func handleDreamDrawn(g *Game) interact.GameState {
-	Println(dreamDrawn)
 	g.NewPrompt("You've drawn a Nightmare:")
 	for i, card := range g.Hand {
 		if card.Symbol == Key {
@@ -345,7 +348,7 @@ func handleDreamDrawn(g *Game) interact.GameState {
 		}
 	}
 	for i, card := range g.Doors {
-		g.AddChoice(fmt.Sprintf("R%d", i+1), fmt.Sprintf("Discard %s from discovered Doors", card))
+		g.AddChoice(fmt.Sprintf("R%d", i+1), fmt.Sprintf("Move %s from to Limbo", card))
 	}
 	g.AddChoice("H0", "Discard your hand")
 	g.AddChoice("T0", "Discard cards from the deck")
@@ -355,42 +358,43 @@ func handleDreamDrawn(g *Game) interact.GameState {
 	switch action {
 	case "K":
 		c := g.Hand.RemoveCardAt(index)
-		g.Discard.AddCard(c)
+		g.discard(c)
 	case "R":
 		c := g.Doors.RemoveCardAt(index)
-		g.Discard.AddCard(c)
+		g.moveToLimbo(c)
 	case "H":
 		for _, c := range g.Hand {
-			g.Discard.AddCard(c)
+			g.discard(c)
 		}
-		g.Hand = nil
+		if err := g.fillHand(); err != nil {
+			return endOfGame
+		}
 	case "T":
 		for i := 0; i < 5; i++ {
-			c, err := g.Deck.DrawCard()
+			c, err := g.drawCard()
 			if err != nil {
 				return endOfGame
 			}
 			if c.Class == Labyrinth {
-				g.Discard.AddCard(c)
+				g.discard(c)
 			} else {
-				g.Limbo.AddCard(c)
+				g.moveToLimbo(c)
 			}
 		}
-		g.ShuffleLimboIntoDeck()
 	}
 	return endOfTurn
 }
 
-func (g *Game) ShuffleLimboIntoDeck() {
+func (g *Game) shuffleLimboIntoDeck() {
 	if len(g.Limbo) == 0 {
 		return
 	}
 	g.Deck = append(g.Deck, g.Limbo...)
+	g.Limbo = nil
 	g.Deck.Shuffle()
 }
 
 func handleEndOfGame(g *Game) interact.GameState {
-	Printf(endOfGame)
 	g.Done = true
 	return endOfGame
 }
@@ -403,4 +407,49 @@ func (g *Game) isPlayable(c *Card) bool {
 		return false
 	}
 	return c.Symbol != g.Row.LastCard().Symbol
+}
+
+func (g *Game) drawCard() (*Card, error) {
+	c, err := g.Deck.DrawCard()
+	if err == nil {
+		g.Logf("Drew %s", c)
+	}
+	return c, err
+}
+
+func (g *Game) discard(c *Card) {
+	g.Discard.AddCard(c)
+	g.Logf("Discarded %s", c)
+}
+
+func (g *Game) placeOnDeck(c *Card) {
+	g.Deck = append(Deck{c}, g.Deck...)
+	g.Logf("Placed %s on deck", c)
+}
+
+func (g *Game) playCard(c *Card) {
+	g.Row.AddCard(c)
+	g.Logf("Played %s to row", c)
+}
+
+func (g *Game) moveToLimbo(c *Card) {
+	g.Limbo.AddCard(c)
+	g.Logf("Moved %s to Limbo", c)
+}
+
+func (g *Game) fillHand() error {
+	g.Hand = nil
+	for i := 0; i < 5; {
+		c, err := g.drawCard()
+		if err != nil {
+			return err
+		}
+		if c.Class != Labyrinth {
+			g.moveToLimbo(c)
+			continue
+		}
+		g.Hand.AddCard(c)
+		i++
+	}
+	return nil
 }
