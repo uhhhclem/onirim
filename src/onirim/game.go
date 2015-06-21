@@ -11,26 +11,19 @@ import (
 
 var printChan chan string
 
-func init() {
-	printChan = make(chan string)
-	go func() {
-		for {
-			s := <-printChan
-			fmt.Print(s)
-		}
-	}()
+func print(s ...interface{}) {
+	if printChan == nil {
+		return
+	}
+	printChan <- fmt.Sprint(s...)
 }
 
-func Print(s ...interface{}) {
-	printChan <- fmt.Sprint(s)
+func println(s ...interface{}) {
+	print(fmt.Sprintln(s))
 }
 
-func Println(s ...interface{}) {
-	printChan <- fmt.Sprintln(s)
-}
-
-func Printf(f string, data ...interface{}) {
-	printChan <- fmt.Sprintf(f, data...)
+func printf(f string, data ...interface{}) {
+	print(fmt.Sprintf(f, data...))
 }
 
 type Game struct {
@@ -55,11 +48,20 @@ func NewGame() (*Game, error) {
 	if err := g.fillHand(); err != nil {
 		return nil, err
 	}
+	g.shuffleLimboIntoDeck()
 	return g, nil
 }
 
 func (g *Game) RunLocal() {
 	g.State = startOfTurn
+
+	printChan = make(chan string)
+	go func() {
+		for {
+			s := <-printChan
+			fmt.Print(s)
+		}
+	}()
 
 	go func() {
 		for {
@@ -67,7 +69,7 @@ func (g *Game) RunLocal() {
 			if s == nil {
 				return
 			}
-			Println(s.Message)
+			println(s.Message)
 		}
 	}()
 
@@ -82,16 +84,16 @@ func (g *Game) RunLocal() {
 			for _, c := range p.Choices {
 				fmt.Fprintf(buf, "  %s: %s\n", c.Key, c.Name)
 			}
-			Print(buf.String())
+			print(buf.String())
 			for {
 				var key string
 				n, err := fmt.Scanf("%s\n", &key)
 				if err != nil || n != 1 {
-					Println(n, err)
+					println(n, err)
 					continue
 				}
 				if err := g.MakeChoice(key); err != nil {
-					Println(err)
+					println(err)
 					continue
 				}
 				break
@@ -229,7 +231,7 @@ func parseKey(key string) (string, int) {
 	index := string(key[1])
 	i, err := strconv.Atoi(index)
 	if err != nil {
-		Println(err)
+		println(err)
 		os.Exit(1)
 	}
 	return action, i - 1
@@ -270,7 +272,7 @@ func (g *Game) playDoor(color ColorEnum) bool {
 }
 
 func handleEndOfTurn(g *Game) interact.GameState {
-	Printf(`
+	printf(`
 
 Hand    : %s
 Row     : %s
@@ -287,10 +289,9 @@ Doors   : %s
 	var err error
 	g.Drawn, err = g.drawCard()
 	if err != nil {
-		Println(err)
+		println(err)
 		return endOfGame
 	}
-	g.Logf("Drew %s", g.Drawn)
 	switch g.Drawn.Class {
 	case Labyrinth:
 		g.Hand.AddCard(g.Drawn)
@@ -385,28 +386,14 @@ func handleDreamDrawn(g *Game) interact.GameState {
 	return endOfTurn
 }
 
-func (g *Game) shuffleLimboIntoDeck() {
-	if len(g.Limbo) == 0 {
-		return
-	}
-	g.Deck = append(g.Deck, g.Limbo...)
-	g.Limbo = nil
-	g.Deck.Shuffle()
-}
-
 func handleEndOfGame(g *Game) interact.GameState {
 	g.Done = true
 	return endOfGame
 }
 
-func (g *Game) isPlayable(c *Card) bool {
-	if len(g.Row) == 0 {
-		return true
-	}
-	if c.Class != Labyrinth {
-		return false
-	}
-	return c.Symbol != g.Row.LastCard().Symbol
+func (g *Game) discard(c *Card) {
+	g.Discard.AddCard(c)
+	g.Logf("Discarded %s", c)
 }
 
 func (g *Game) drawCard() (*Card, error) {
@@ -415,26 +402,6 @@ func (g *Game) drawCard() (*Card, error) {
 		g.Logf("Drew %s", c)
 	}
 	return c, err
-}
-
-func (g *Game) discard(c *Card) {
-	g.Discard.AddCard(c)
-	g.Logf("Discarded %s", c)
-}
-
-func (g *Game) placeOnDeck(c *Card) {
-	g.Deck = append(Deck{c}, g.Deck...)
-	g.Logf("Placed %s on deck", c)
-}
-
-func (g *Game) playCard(c *Card) {
-	g.Row.AddCard(c)
-	g.Logf("Played %s to row", c)
-}
-
-func (g *Game) moveToLimbo(c *Card) {
-	g.Limbo.AddCard(c)
-	g.Logf("Moved %s to Limbo", c)
 }
 
 func (g *Game) fillHand() error {
@@ -453,3 +420,39 @@ func (g *Game) fillHand() error {
 	}
 	return nil
 }
+
+func (g *Game) isPlayable(c *Card) bool {
+	if len(g.Row) == 0 {
+		return true
+	}
+	if c.Class != Labyrinth {
+		return false
+	}
+	return c.Symbol != g.Row.LastCard().Symbol
+}
+
+func (g *Game) moveToLimbo(c *Card) {
+	g.Limbo.AddCard(c)
+	g.Logf("Moved %s to Limbo", c)
+}
+
+func (g *Game) placeOnDeck(c *Card) {
+	g.Deck = append(Deck{c}, g.Deck...)
+	g.Logf("Placed %s on deck", c)
+}
+
+func (g *Game) playCard(c *Card) {
+	g.Row.AddCard(c)
+	g.Logf("Played %s to row", c)
+}
+
+func (g *Game) shuffleLimboIntoDeck() {
+	if len(g.Limbo) == 0 {
+		return
+	}
+	g.Deck = append(g.Deck, g.Limbo...)
+	g.Limbo = nil
+	g.Deck.Shuffle()
+	g.Log("Shuffled Limbo into deck.")
+}
+

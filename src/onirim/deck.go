@@ -28,9 +28,9 @@ const (
 var colors = map[ColorEnum]string{
 	NoColor: "None",
 	Red:     "Red",
-	Blue:    "Blue",
 	Green:   "Green",
 	Brown:   "Brown",
+	Blue:    "Blue",
 }
 
 // String returns the name of the color.
