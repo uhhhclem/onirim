@@ -4,7 +4,6 @@ package onirim
 import (
 	"errors"
 	"fmt"
-	"log"
 	"math/rand"
 	"strings"
 	"time"
@@ -20,9 +19,9 @@ type ColorEnum int
 const (
 	NoColor ColorEnum = iota
 	Red
-	Blue
-	Green
 	Brown
+	Green
+	Blue
 )
 
 // Colors contains the names of the colors.
@@ -86,16 +85,14 @@ type Card struct {
 }
 
 func (c *Card) String() string {
-	switch c.Class {
-	case Dream:
-		return "D:NM"
-	case Labyrinth:
-		return fmt.Sprintf("L:%s%s", c.Color.String()[0:1], c.Symbol.String()[0:1])
-	case Door:
-		return fmt.Sprintf("R:%s", c.Color.String()[0:1])
-	default:
-		return ""
+	if c.Class == Dream {
+		return "[Nightmare]"
 	}
+	name := "Door"
+	if c.Class != Door {
+		name = c.Symbol.String()
+	}
+	return fmt.Sprintf("\033[%dm[%s]\033[37m", c.Color+30, name)
 }
 
 // Deck represents any ordered collection of cards:  the deck, a hand, a pile, etc.
@@ -173,7 +170,7 @@ func FillHand(deck, hand *Deck) error {
 	limbo := make(Deck, 0)
 	defer func() {
 		if err == nil && len(limbo) > 0 {
-			log.Print("Shuffling Limbo into Deck")
+			Println("Shuffling Limbo back into deck")
 			*deck = append(*deck, limbo...)
 			(*deck).Shuffle()
 		}
@@ -188,12 +185,12 @@ func FillHand(deck, hand *Deck) error {
 			return err
 		}
 		if c.Class != Labyrinth {
-			log.Printf("%s moved to Limbo", c)
+			Printf("%s moved to Limbo\n", c)
 			limbo = append(limbo, c)
 			continue
 		}
 		*hand = append(*hand, c)
-		log.Printf("%s added to Hand", c)
+		Printf("%s added to Hand\n", c)
 	}
 	return nil
 }

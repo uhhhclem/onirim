@@ -1,3 +1,8 @@
 src/github.com
 src/code.google.com
 pkg
+ansicon.exe
+ansi32.dll
+onirim.sublime-project
+onirim.sublime-workspace
+.gitignore
