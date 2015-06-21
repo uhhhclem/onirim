@@ -85,6 +85,22 @@ type Card struct {
 }
 
 func (c *Card) String() string {
+	if isLocal() {
+		return c.localString()
+	}
+	name := ""
+	switch c.Class{
+	case Dream:
+		name = "Nightmare"
+	case Door:
+		name = fmt.Sprintf("%s %s", c.Color, c.Class)
+	case Labyrinth:
+		name = fmt.Sprintf("%s %s", c.Color, c.Symbol)
+	}
+	return fmt.Sprintf("[%s]", name)
+}
+
+func (c *Card) localString() string {
 	if c.Class == Dream {
 		return "[Nightmare]"
 	}

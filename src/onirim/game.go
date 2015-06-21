@@ -11,8 +11,12 @@ import (
 
 var printChan chan string
 
+func isLocal() bool {
+	return printChan != nil
+}
+
 func print(s ...interface{}) {
-	if printChan == nil {
+	if !isLocal() {
 		return
 	}
 	printChan <- fmt.Sprint(s...)
@@ -49,11 +53,13 @@ func NewGame() (*Game, error) {
 		return nil, err
 	}
 	g.shuffleLimboIntoDeck()
+	g.State = startOfTurn
+
 	return g, nil
 }
 
+// RunLocal runs the game locally, sending all IO to the console.
 func (g *Game) RunLocal() {
-	g.State = startOfTurn
 
 	printChan = make(chan string)
 	go func() {
@@ -101,12 +107,18 @@ func (g *Game) RunLocal() {
 		}
 	}()
 
+	g.Run()
+}
+
+// Run runs the game's main state loop.
+func (g *Game) Run() {
 	for {
 		if g.Done {
 			break
 		}
 		h := handlers[g.State]
 		g.State = h(g)
+		g.Ready <- true
 	}
 }
 
