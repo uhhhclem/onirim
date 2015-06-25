@@ -30,35 +30,37 @@
   
 </head>
 <body ng-app="onirimApp" ng-controller="onirimCtrl">
-  <md-content layout="column">
-  <md-whiteframe class="md-whiteframe-z3">
+  <md-content layout="row">
     <md-content>
-      <table>
-        <tr>
-          <td>Hand:</td>
-          <td>{{board.Hand}}</td>
-        </tr>
-        <tr>
-          <td>Discard:</td>
-          <td>{{board.Discard}}</td>
-        </tr>
-        <tr>
-          <td>Doors:</td>
-          <td>{{board.Doors}}</td>
-        </tr>
-        <tr>
-          <td>Row:</td>
-          <td>{{board.Row}}</td>
-        </tr>
-        <tr>
-          <td>Cards Remaining:</td>
-          <td>{{board.CardsRemaining}}</td>
-        </tr>
-      </table>
+        <table>
+          <tr>
+            <td>Hand:</td>
+            <td>{{board.Hand}}</td>
+          </tr>
+          <tr>
+            <td>Discard:</td>
+            <td>{{board.Discard}}</td>
+          </tr>
+          <tr>
+            <td>Doors:</td>
+            <td>{{board.Doors}}</td>
+          </tr>
+          <tr>
+            <td>Row:</td>
+            <td>{{board.Row}}</td>
+          </tr>
+          <tr>
+            <td>Cards Remaining:</td>
+            <td>{{board.CardsRemaining}}</td>
+          </tr>
+        </table>
     </md-content>
-  </md-whiteframe>
-  <md-content layout="row" layout-fill>
-    <md-whiteframe class="md-whiteframe-z3">
+    <md-content>
+      <img class="card" src="../../LYK.png"/>
+    </md-content>  
+  </md-content>
+  <md-content layout="row" layout-fill style="padding: 10px;">
+    <md-content>
       <md-toolbar>
         <div class="md-toolbar-tools">
           {{prompt.Prompt.Message}}
