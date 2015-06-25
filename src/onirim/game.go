@@ -118,7 +118,9 @@ func (g *Game) Run() {
 		}
 		h := handlers[g.State]
 		g.State = h(g)
-		g.Ready <- true
+		if !isLocal() {
+			g.Ready <- true
+		}
 	}
 }
 

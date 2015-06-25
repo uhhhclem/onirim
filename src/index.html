@@ -1,16 +1,20 @@
 <head>
 
-  <!-- Angular Material CSS now available via Google CDN; version 0.8 used here -->
-  <link rel="stylesheet" href="https://ajax.googleapis.com/ajax/libs/angular_material/0.8.3/angular-material.min.css">
+    <!-- Angular Material CSS now available via Google CDN; version 0.10 used here -->
+  <link rel="stylesheet" href="https://ajax.googleapis.com/ajax/libs/angular_material/0.10.0/angular-material.min.css">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=RobotoDraft:300,400,500,700,400italic">
   
   <style type="text/css">
     a:link, a:visited {
       text-decoration: none;
+      color: inherit;
+    }
+    a:hover {
       color: blue;
     }
     md-whiteframe {
       padding: 20px;
+      margin: 10px;
     }
   </style>
 
@@ -19,14 +23,16 @@
   <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.3.15/angular-animate.min.js"></script>
   <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.3.15/angular-aria.min.js"></script>
 
-  <!-- Angular Material Javascript now available via Google CDN; version 0.8 used here -->
-  <script src="https://ajax.googleapis.com/ajax/libs/angular_material/0.8.3/angular-material.min.js"></script>
+  <!-- Angular Material Javascript now available via Google CDN; version 0.10 used here -->
+  <script src="https://ajax.googleapis.com/ajax/libs/angular_material/0.10.0/angular-material.min.js"></script>
 
   <script src="js/app.js"></script>
   
 </head>
 <body ng-app="onirimApp" ng-controller="onirimCtrl">
-  <md-content>
+  <md-content layout="column">
+  <md-whiteframe class="md-whiteframe-z3">
+    <md-content>
       <table>
         <tr>
           <td>Hand:</td>
@@ -49,9 +55,10 @@
           <td>{{board.CardsRemaining}}</td>
         </tr>
       </table>
-  </md-content>
-  <md-content layout="row" layout-fill style="padding: 10px;">
-    <md-content>
+    </md-content>
+  </md-whiteframe>
+  <md-content layout="row" layout-fill>
+    <md-whiteframe class="md-whiteframe-z3">
       <md-toolbar>
         <div class="md-toolbar-tools">
           {{prompt.Prompt.Message}}
@@ -62,8 +69,8 @@
           <a href="" ng-click="makeChoice(c.Key)">{{c.Name}}</a>
         </div>
       </md-content>
-    </md-content>
-    <md-content>
+    </md-whiteframe>
+    <md-whiteframe class="md-whiteframe-z3">
       <md-toolbar>
         <div class="md-toolbar-tools">
           Status
@@ -74,6 +81,7 @@
           {{s.Status.Message}}
         </div>
       </md-content>
+    </md-whiteframe>
     </md-content>
-  </md-content>
+</md-content>
 </body>
