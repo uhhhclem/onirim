@@ -33,6 +33,9 @@ var symbolKey = map[SymbolEnum]string {
 
 
 func (c *Card) key() string {
+    if c.Class == Dream {
+        return "DN"
+    }
     return fmt.Sprintf("%s%s%s", classKey[c.Class], colorKey[c.Color], symbolKey[c.Symbol])
 }
 

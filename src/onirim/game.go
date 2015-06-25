@@ -363,7 +363,7 @@ func handleDreamDrawn(g *Game) interact.GameState {
 		}
 	}
 	for i, card := range g.Doors {
-		g.AddChoice(fmt.Sprintf("R%d", i+1), fmt.Sprintf("Move %s from to Limbo", card))
+		g.AddChoice(fmt.Sprintf("R%d", i+1), fmt.Sprintf("Move %s to Limbo", card))
 	}
 	g.AddChoice("H0", "Discard your hand")
 	g.AddChoice("T0", "Discard cards from the deck")
@@ -397,6 +397,7 @@ func handleDreamDrawn(g *Game) interact.GameState {
 			}
 		}
 	}
+	g.discard(g.Drawn)
 	return endOfTurn
 }
 
@@ -406,6 +407,9 @@ func handleEndOfGame(g *Game) interact.GameState {
 }
 
 func (g *Game) discard(c *Card) {
+	if c == g.Drawn {
+		g.Drawn = nil
+	}
 	g.Discard.AddCard(c)
 	g.Logf("Discarded %s", c)
 }

@@ -16,6 +16,11 @@
       padding: 20px;
       margin: 10px;
     }
+    .card {
+      position: absolute;
+      border: 5px solid #191013;
+      border-radius: 8px;
+    }
   </style>
 
   <!-- Angular Material Dependencies -->
@@ -34,20 +39,44 @@
     <md-content>
         <table>
           <tr>
-            <td>Hand:</td>
-            <td>{{board.Hand}}</td>
+            <td>
+              Hand:
+            </td>
+            <td>
+              <div style="position: relative; width: 300px; height: 200px;">
+                <img ng-repeat="c in board.Hand track by $index" class="card" 
+                     src="images/{{c}}.png" 
+                     style="left:{{$index * 30}}px"/>
+              </div>
+            </td>
+            <td>Doors:</td>
+            <td>
+              <div style="position: relative; width: 300px; height: 200px;">
+                <img ng-repeat="c in board.Doors track by $index" class="card" 
+                     src="images/{{c}}.png" 
+                     style="left:{{$index * 30}}px"/>
+              </div>
+            </td>
           </tr>
           <tr>
             <td>Discard:</td>
-            <td>{{board.Discard}}</td>
-          </tr>
-          <tr>
-            <td>Doors:</td>
-            <td>{{board.Doors}}</td>
+            <td>
+              <div style="position: relative; width: 300px; height: 200px;">
+                <img ng-repeat="c in board.Discard track by $index" class="card" 
+                     src="images/{{c}}.png" 
+                     style="left:{{$index * 30}}px"/>
+              </div>
+            </td>
           </tr>
           <tr>
             <td>Row:</td>
-            <td>{{board.Row}}</td>
+            <td>
+              <div style="position: relative; width: 300px; height: 200px;">
+                <img ng-repeat="c in board.Row track by $index" class="card" 
+                     src="images/{{c}}.png" 
+                     style="left:{{$index * 30}}px"/>
+              </div>
+            </td>
           </tr>
           <tr>
             <td>Cards Remaining:</td>
@@ -55,12 +84,9 @@
           </tr>
         </table>
     </md-content>
-    <md-content>
-      <img class="card" src="../../LYK.png"/>
-    </md-content>  
   </md-content>
   <md-content layout="row" layout-fill style="padding: 10px;">
-    <md-content>
+    <md-whiteframe class="md-whiteframe-z3">
       <md-toolbar>
         <div class="md-toolbar-tools">
           {{prompt.Prompt.Message}}
