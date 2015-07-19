@@ -1,6 +1,6 @@
 var onirimApp = angular.module('onirimApp', ['ngMaterial']);
 
-onirimApp.controller('onirimCtrl', function($scope, $http, $mdSidenav){
+onirimApp.controller('onirimCtrl', function($scope, $http, $mdSidenav, $mdDialog){
     
     $scope.status = [];
     
@@ -10,7 +10,10 @@ onirimApp.controller('onirimCtrl', function($scope, $http, $mdSidenav){
             if (d.State == "End") {
                 return;
             }
-
+            if ($scope.board.Done) {
+                $scope.showAlert();
+                return null;
+            }
             return $scope.getBoard();
         });
     };
@@ -42,6 +45,18 @@ onirimApp.controller('onirimCtrl', function($scope, $http, $mdSidenav){
             .error(function(d){
                 $scope.status.push('Choice failed: ' + d);
             });
+    };
+
+    $scope.showAlert = function() {
+      alert = $mdDialog.alert()
+        .title('Game Over')
+        .content($scope.board.Won ? 'You won!' : 'You lost!')
+        .ok('Close');
+      $mdDialog
+          .show( alert )
+          .finally(function() {
+            alert = undefined;
+          });
     };
 
     $http.get('/api/newGame').success(function(d){

@@ -89,7 +89,7 @@ func (c *Card) String() string {
 		return c.localString()
 	}
 	name := ""
-	switch c.Class{
+	switch c.Class {
 	case Dream:
 		name = "Nightmare"
 	case Door:

@@ -33,6 +33,7 @@ func printf(f string, data ...interface{}) {
 type Game struct {
 	*interact.Game
 	Done      bool           // Is the game over?
+	Won       bool           // Did you win?
 	Deck      Deck           // Your deck.
 	Hand      Deck           // Your hand.  Ordering is insignificant.
 	Row       Deck           // The row of cards that you play to.
@@ -295,6 +296,10 @@ Doors   : %s
 
 `, g.Hand, g.Row, g.Discard, g.Doors)
 
+	if len(g.Doors) == 8 {
+		return endOfGame
+	}
+
 	if len(g.Hand) == 5 {
 		g.shuffleLimboIntoDeck()
 		return startOfTurn
@@ -402,6 +407,7 @@ func handleDreamDrawn(g *Game) interact.GameState {
 }
 
 func handleEndOfGame(g *Game) interact.GameState {
+	g.Won = len(g.Doors) == 8
 	g.Done = true
 	return endOfGame
 }
@@ -473,4 +479,3 @@ func (g *Game) shuffleLimboIntoDeck() {
 	g.Deck.Shuffle()
 	g.Log("Shuffled Limbo into deck.")
 }
-
